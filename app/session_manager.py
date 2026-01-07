@@ -2,7 +2,7 @@ import uuid
 import time
 import threading
 from typing import Dict, Optional, List
-from terminal_api import TerminalAPI
+from .terminal_api import TerminalAPI
 
 
 class SessionManager:

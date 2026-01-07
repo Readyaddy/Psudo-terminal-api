@@ -1,3 +1,5 @@
 pywinpty>=2.0.10
 fastapi
 uvicorn
+pydantic
+requests

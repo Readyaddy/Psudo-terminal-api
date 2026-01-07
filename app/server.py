@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 import uvicorn
-from session_manager import SessionManager
+from .session_manager import SessionManager
 
 app = FastAPI(title="Terminal Access API")
 sess_manager = SessionManager()

@@ -14,6 +14,43 @@ This project exposes a **REST API** (FastAPI) that allows you to spawn, control,
 *   **Command History**: Tracks commands executed in each session.
 *   **Clean Output**: Filters "junk" ANSI sequences (Device Attributes, etc.) while preserving formatting.
 
+---
+
+## 🛠️ Architecture
+
+Here is how the components interact to provide a persistent terminal session:
+
+```mermaid
+graph TD
+    Client[User / Client Script] -->|HTTP Requests| API[FastAPI Server]
+    API -->|Manage Sessions| SM[Session Manager]
+    SM -->|Control| T1[Terminal Session 1]
+    SM -->|Control| T2[Terminal Session 2]
+    
+    subgraph "Single Session (TerminalAPI)"
+        T1 -->|Spawn| PTY[PyWinPTY Process]
+        PTY -->|Run| Shell[WSL / CMD / PowerShell]
+        Shell -->|Output Stream| Filter[Output Filter]
+        Filter -->|Clean Data| Buffer[Output Buffer]
+        Buffer -->|Read| API
+        API -->|Write Input| PTY
+        
+        Filter -.->|Log| LogFile[Log File]
+    end
+```
+
+### Component Roles
+*   **Client**: Your python script or frontend that sends HTTP requests.
+*   **FastAPI Application (`app/server.py`)**: The entry point. Receives HTTP requests and routes them to the Session Manager.
+*   **Session Manager (`app/session_manager.py`)**: Holds the state of all active sessions. It creates, retrieves, and kills sessions.
+*   **Terminal API (`app/terminal_api.py`)**: The heavy lifter. Each instance wraps a single `pywinpty` process. It handles:
+    *   Spawning the real shell (WSL/CMD).
+    *   Reading raw output in a background thread.
+    *   Cleaning "junk" ANSI codes (like cursor tracking requests) so you get clean text.
+    *   Writing your input commands to the shell.
+
+---
+
 ## 🛠️ Installation
 
 1.  **Clone the repository:**
@@ -26,7 +63,7 @@ This project exposes a **REST API** (FastAPI) that allows you to spawn, control,
     ```bash
     pip install -r requirements.txt
     ```
-    *(Requires `fastapi`, `uvicorn`, `pywinpty`)*
+    *(Requires `fastapi`, `uvicorn`, `pywinpty`, `pydantic`)*
 
 3.  **Requirements:**
     *   Windows 10/11
@@ -36,8 +73,9 @@ This project exposes a **REST API** (FastAPI) that allows you to spawn, control,
 ## ⚡ Quick Start
 
 1.  **Start the Server:**
+    Run the server as a module from the root directory:
     ```bash
-    python server.py
+    python -m app.server
     ```
     The API will run at `http://127.0.0.1:8000`.
 
@@ -94,17 +132,12 @@ Use this for interactive apps (Vim, Nano) or sending special keys. It sends text
 
 Retrieves any unread output from the session buffer. Useful for monitoring long-running tasks.
 
-### 5. Check Log Files
-**Directory:** `logs/`
-
-Every character printed by the terminal is saved to a log file for debugging/monitoring:
-*   Example: `logs/my-kali-session_4bfd4dd9.log`
-*   You can watch this file in real-time using `tail -f` (in another terminal).
-
 ## 💡 Examples
 
+You can find working examples in the `testing_code/` directory.
+
 ### Using Python to Interact
-See `example_interactive.py` for a full demo.
+See `testing_code/example_interactive.py` for a full demo.
 
 ```python
 import requests
@@ -121,20 +154,27 @@ requests.post(f"http://localhost:8000/sessions/{sid}/command", json={"command": 
 ```
 
 ### Controlling Vim
-See `verify_vim.py`. The API allows you to open Vim, send `i` (insert), type text, send `Esc`, and `:wq` to save/quit programmatically.
+See `testing_code/verify_vim.py`. The API allows you to open Vim, send `i` (insert), type text, send `Esc`, and `:wq` to save/quit programmatically.
 
 ## ⚙️ Configuration
 
-*   **Default Shell**: Configured in `terminal_api.py` (Default: `cmd.exe /c wsl -d kali-linux`).
-*   **Connection**: `server.py` runs on `0.0.0.0` or `127.0.0.1` port `8000`.
+*   **Default Shell**: Configured in `app/terminal_api.py` (Default: `cmd.exe /c wsl -d kali-linux`).
+*   **Connection**: `app/server.py` runs on `127.0.0.1` port `8000`, but you can modify it to `0.0.0.0` for external access.
 
 ## 📦 Project Structure
 
-*   `server.py`: FastAPI application entry point.
-*   `session_manager.py`: Handles creation, storage, and cleanup of sessions.
-*   `terminal_api.py`: Low-level wrapper around `pywinpty`.
-*   `logs/`: Stores session output logs.
-*   `examples/`: Contains usage examples.
+```text
+/
+├── app/                  # Core application package
+│   ├── __init__.py
+│   ├── server.py         # FastAPI application entry point
+│   ├── session_manager.py # Manages session state & persistence
+│   └── terminal_api.py   # Low-level PTY wrapper & output filtering
+├── logs/                 # Stores session output logs (auto-generated)
+├── testing_code/         # Usage examples & verification scripts
+├── requirements.txt      # Python dependencies
+└── README.md             # Documentation
+```
 
 ## 🤝 Contributing
 
