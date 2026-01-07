@@ -1,0 +1,95 @@
+import sys
+import msvcrt
+import time
+from terminal_api import TerminalAPI
+
+
+def start_interactive_bridge():
+    """Interactive terminal bridge using the TerminalAPI with filtering."""
+    
+    # Create terminal with filtering
+    terminal = TerminalAPI(cols=120, rows=30)
+    terminal.start()
+    
+    # === startup cleanup ===
+    # Give the shell time to initialize and query the terminal
+    time.sleep(1.0)
+    
+    # Read and discard all initial output (including the junk)
+    _ = terminal.read_output()
+    
+    # Send Ctrl+C to clear any junk that might have been "typed" into the prompt
+    terminal.write('\x03')
+    time.sleep(0.1)
+    # Read and discard the echo of Ctrl+C and the new prompt
+    _ = terminal.read_output()
+    
+    print("--- BRIDGE ACTIVE (Ctrl+C to exit) ---")
+    print("(Output is filtered for clean display)")
+    
+    # Key mapping for special keys (0x00 or 0xe0 prefix)
+    SPECIAL_KEYS = {
+        72: '\x1b[A',  # Up Arrow
+        80: '\x1b[B',  # Down Arrow
+        77: '\x1b[C',  # Right Arrow
+        75: '\x1b[D',  # Left Arrow
+        71: '\x1b[H',  # Home
+        79: '\x1b[F',  # End
+        83: '\x1b[3~', # Delete
+        73: '\x1b[5~', # Page Up
+        81: '\x1b[6~', # Page Down
+    }
+    
+    # Output display thread
+    import threading
+    def display_output():
+        while terminal.is_alive():
+            output = terminal.read_output(timeout=0.05)
+            if output:
+                sys.stdout.write(output)
+                sys.stdout.flush()
+            time.sleep(0.01)
+    
+    output_thread = threading.Thread(target=display_output, daemon=True)
+    output_thread.start()
+    
+    # Input loop
+    try:
+        while terminal.is_alive():
+            if msvcrt.kbhit():
+                char = msvcrt.getch()
+                
+                # Check for special key prefix
+                if char in (b'\x00', b'\xe0'):
+                    if msvcrt.kbhit():
+                        scancode = ord(msvcrt.getch())
+                        if scancode in SPECIAL_KEYS:
+                            terminal.write(SPECIAL_KEYS[scancode])
+                    continue
+
+                if char == b'\r':  # Enter
+                    terminal.write('\r')
+                elif char == b'\x08':  # Backspace
+                    terminal.write('\x7f')
+                elif char == b'\t':  # Tab
+                    terminal.write('\t')
+                elif char == b'\x03':  # Ctrl+C
+                    terminal.write('\x03')
+                elif char == b'\x1b':  # ESC
+                    terminal.write('\x1b')
+                else:
+                    try:
+                        terminal.write(char.decode('utf-8'))
+                    except UnicodeDecodeError:
+                        pass
+            time.sleep(0.001)
+    except KeyboardInterrupt:
+        print("\n--- BRIDGE TERMINATED ---")
+    finally:
+        terminal.close()
+
+
+if __name__ == "__main__":
+    # Clear screen and start
+    sys.stdout.write("\033[2J\033[H")
+    start_interactive_bridge()
