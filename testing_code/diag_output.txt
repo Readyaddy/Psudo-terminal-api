@@ -1,0 +1,20 @@
+Python Executable: C:\Users\Addy\miniconda3\envs\npu_test\python.exe
+CWD: C:\Users\Addy\Projects\terminal_access_python
+
+Sys Path:
+  - C:\Users\Addy\Projects\terminal_access_python
+  - C:\Users\Addy\miniconda3\envs\npu_test\python310.zip
+  - C:\Users\Addy\miniconda3\envs\npu_test\DLLs
+  - C:\Users\Addy\miniconda3\envs\npu_test\lib
+  - C:\Users\Addy\miniconda3\envs\npu_test
+  - C:\Users\Addy\miniconda3\envs\npu_test\lib\site-packages
+  - C:\Users\Addy\miniconda3\envs\npu_test\lib\site-packages\win32
+  - C:\Users\Addy\miniconda3\envs\npu_test\lib\site-packages\win32\lib
+  - C:\Users\Addy\miniconda3\envs\npu_test\lib\site-packages\Pythonwin
+
+Attempting import pywinpty...
+ERROR: No module named 'pywinpty'
+Type: <class 'ModuleNotFoundError'>
+
+Checking spec:
+Spec: None
