@@ -1,4 +1,5 @@
 import sys
+import os
 import threading
 import ctypes
 import time
@@ -122,6 +123,8 @@ class TerminalAPI:
                             try:
                                 with open(self.log_path, 'a', encoding='utf-8') as f:
                                     f.write(filtered_data)
+                                    f.flush()
+                                    os.fsync(f.fileno())
                             except Exception as log_err:
                                 print(f"Failed to write log: {log_err}")
                                 

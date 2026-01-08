@@ -1,7 +1,9 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import uvicorn
+import os
 from .session_manager import SessionManager
 
 app = FastAPI(title="Terminal Access API")
@@ -128,6 +130,25 @@ def get_history(session_id: str):
     if history is None: # None means session not found/no history tracking
          raise HTTPException(status_code=404, detail="Session history not found")
     return history
+
+@app.get("/sessions/{session_id}/logs")
+def get_session_logs(session_id: str):
+    """
+    Get the full logs for a specific session.
+    Returns the content of the log file as plain text.
+    """
+    session = sess_manager.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+        
+    log_path = session.log_path
+    if not log_path or not os.path.exists(log_path):
+        raise HTTPException(status_code=404, detail="Log file not found for this session")
+
+    with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+        content = f.read()
+        
+    return PlainTextResponse(content)
 
 @app.on_event("shutdown")
 def shutdown_event():
